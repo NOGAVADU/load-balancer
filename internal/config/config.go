@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/nogavadu/load_balancer/internal/lib/logger/sl"
+	"log/slog"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -21,11 +24,13 @@ type HTTPServer struct {
 }
 
 type Config struct {
+	path         string
+	mux          *sync.RWMutex
 	HTTPServer   HTTPServer `yaml:"http_server"`
 	BackendsPool []string   `yaml:"backends_pool"`
 }
 
-func Load(path string) (*Config, error) {
+func Read(path string) (*Config, error) {
 	if path == "" {
 		return nil, errEmptyConfigPath
 	}
@@ -34,10 +39,39 @@ func Load(path string) (*Config, error) {
 		return nil, errConfigFileNotFound
 	}
 
-	var cfg Config
-	if err := cleanenv.ReadConfig(path, &cfg); err != nil {
+	cfg := &Config{
+		path: path,
+		mux:  &sync.RWMutex{},
+	}
+	if err := cleanenv.ReadConfig(path, cfg); err != nil {
 		return nil, fmt.Errorf("%w: %w", errInvalidConfig, err)
 	}
 
-	return &cfg, nil
+	return cfg, nil
+}
+
+func (c *Config) UpdateBackendsPool() error {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+
+	cfg, err := Read(c.path)
+	if err != nil {
+		return fmt.Errorf("%w: %w", errInvalidConfig, err)
+	}
+
+	c.BackendsPool = cfg.BackendsPool
+
+	return nil
+}
+
+func (c *Config) WatchConfig(logger *slog.Logger) {
+	ticker := time.NewTicker(time.Minute)
+	for range ticker.C {
+		err := c.UpdateBackendsPool()
+		if err != nil {
+			logger.Error("failed to update backends pool", sl.Err(err))
+		} else {
+			logger.Info("backends pool has been updated")
+		}
+	}
 }

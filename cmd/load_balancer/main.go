@@ -19,7 +19,7 @@ func main() {
 	logger := slog.New(pretty_slog.NewHandler(nil))
 	logger.Info("logger initialized")
 
-	cfg, err := config.Load(configPath)
+	cfg, err := config.Read(configPath)
 	if err != nil {
 		logger.Error("failed to load config", sl.Err(err))
 		os.Exit(1)
@@ -28,6 +28,9 @@ func main() {
 		logger.Error("empty backends pool")
 		os.Exit(1)
 	}
+
+	go cfg.WatchConfig(logger)
+
 	logger.Info("config initialized")
 
 	var backendsPool lb.BackendsPool
