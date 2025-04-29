@@ -10,6 +10,7 @@ func New(backendsPool *BackendsPool, logger *slog.Logger) http.HandlerFunc {
 		backend := backendsPool.GetNext()
 		if backend == nil {
 			logger.Error("no available backend")
+			http.Error(w, "service not available", http.StatusServiceUnavailable)
 			return
 		}
 

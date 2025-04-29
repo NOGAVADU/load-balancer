@@ -3,6 +3,7 @@ package load_balancer
 import (
 	"fmt"
 	"github.com/nogavadu/load_balancer/internal/lib/logger/sl"
+	"github.com/nogavadu/load_balancer/internal/lib/request"
 	"log/slog"
 	"net/http"
 	"net/http/httputil"
@@ -10,6 +11,11 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+)
+
+const (
+	Attempts int = iota
+	Retry
 )
 
 const backendsCheckTicker = time.Minute * 5
@@ -44,18 +50,15 @@ func (bp *BackendsPool) AddBackend(uri string, logger *slog.Logger) error {
 		return err
 	}
 
-	proxy := &httputil.ReverseProxy{
-		Director: func(req *http.Request) {
-			req.URL.Scheme = serverUrl.Scheme
-			req.URL.Host = serverUrl.Host
-			req.Host = serverUrl.Host
-		},
-		ErrorHandler: func(writer http.ResponseWriter, request *http.Request, e error) {
-			logger.Error(fmt.Sprintf("failed to handle request to %s", serverUrl.Host), sl.Err(e))
+	proxy := httputil.NewSingleHostReverseProxy(serverUrl)
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, e error) {
+		logger.Error(fmt.Sprintf("failed to handle request to %s", serverUrl.Host), sl.Err(e))
 
-			alive := isBackendAlive(serverUrl)
-			bp.changeBackendStatus(serverUrl, alive)
-		},
+		bp.changeBackendStatus(serverUrl, false)
+
+		logger.Info(fmt.Sprintf("Trying another backend..."))
+		lb := New(bp, logger)
+		lb(w, request.CloneRequest(r))
 	}
 
 	bp.backends = append(bp.backends, &Backend{
