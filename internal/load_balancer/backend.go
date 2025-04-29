@@ -1,4 +1,4 @@
-package backends_pool
+package load_balancer
 
 import (
 	"net"

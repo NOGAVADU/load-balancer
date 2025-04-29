@@ -1,4 +1,4 @@
-package backends_pool
+package load_balancer
 
 import (
 	"fmt"
@@ -48,7 +48,7 @@ func (bp *BackendsPool) AddBackend(uri string, logger *slog.Logger) error {
 			req.Host = serverUrl.Host
 		},
 		ErrorHandler: func(writer http.ResponseWriter, request *http.Request, e error) {
-			logger.Error(fmt.Sprintf("failed to proxy request to %s", serverUrl.Host), sl.Err(e))
+			logger.Error(fmt.Sprintf("failed to handle request to %s", serverUrl.Host), sl.Err(e))
 
 			alive := isBackendAlive(serverUrl)
 			bp.changeBackendStatus(serverUrl, alive)

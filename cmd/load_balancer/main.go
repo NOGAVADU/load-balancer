@@ -3,9 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/nogavadu/load_balancer/internal/config"
-	lb "github.com/nogavadu/load_balancer/internal/handlers/load_balancer"
-	bp "github.com/nogavadu/load_balancer/internal/lib/backends_pool"
 	"github.com/nogavadu/load_balancer/internal/lib/logger/sl"
+	lb "github.com/nogavadu/load_balancer/internal/load_balancer"
 	"github.com/nogavadu/load_balancer/pkg/pretty_slog"
 	"log/slog"
 	"net/http"
@@ -32,7 +31,7 @@ func main() {
 	}
 	logger.Info("config initialized")
 
-	var backendsPool bp.BackendsPool
+	var backendsPool lb.BackendsPool
 
 	logger.Info("backends configuration started")
 	var errCounter int
@@ -65,7 +64,7 @@ func main() {
 	}
 }
 
-func startBackendsPoolChecking(backendsPool *bp.BackendsPool, logger *slog.Logger) {
+func startBackendsPoolChecking(backendsPool *lb.BackendsPool, logger *slog.Logger) {
 	ticker := time.NewTicker(5 * time.Minute)
 	for {
 		select {
