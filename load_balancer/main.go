@@ -1,7 +1,12 @@
 package main
 
-import "fmt"
+import (
+	"github.com/nogavadu/load_balancer/pkg/pretty_slog"
+	"log/slog"
+)
 
 func main() {
-	fmt.Println("Hello World!")
+	opts := &slog.HandlerOptions{Level: slog.LevelDebug}
+	logger := slog.New(pretty_slog.NewHandler(opts))
+	logger.Debug("logger initialized")
 }
