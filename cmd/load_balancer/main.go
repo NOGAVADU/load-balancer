@@ -59,7 +59,10 @@ func main() {
 		Handler: lb.New(&backendsPool, logger),
 	}
 
-	logger.Info("load balancer started", slog.Int("port", cfg.HTTPServer.Port))
+	logger.Info("load balancer started",
+		slog.Int("port", cfg.HTTPServer.Port),
+		slog.String("backends", fmt.Sprintf("%v", cfg.BackendsPool)),
+	)
 	if err = server.ListenAndServe(); err != nil {
 		logger.Error("failed to start server", sl.Err(err))
 	}
