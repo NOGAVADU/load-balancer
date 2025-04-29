@@ -15,7 +15,7 @@ var (
 )
 
 type HTTPServer struct {
-	Address     string        `yaml:"address"`
+	Port        int           `yaml:"port"`
 	Timeout     time.Duration `yaml:"timeout"`
 	IdleTimeout time.Duration `yaml:"idle_timeout"`
 }
