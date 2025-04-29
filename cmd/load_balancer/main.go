@@ -23,5 +23,8 @@ func main() {
 	}
 	logger.Info("config initialized")
 
-	_ = cfg
+	if len(cfg.BackendsPool) == 0 {
+		logger.Error("empty backends pool")
+		os.Exit(1)
+	}
 }
