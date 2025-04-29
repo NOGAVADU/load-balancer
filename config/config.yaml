@@ -1,0 +1,9 @@
+http_server:
+  address: "localhost:8080"
+  timeout: 5s
+  idle_timeout: 30s
+servers_pool:
+  - "https://fakestoreapi.com"
+  - "https://fakestoreapi_NOTWORKING.com"
+  - "https://fakestoreapi.com"
+  - "https://fakestoreapi_NOTWORKING.com"
