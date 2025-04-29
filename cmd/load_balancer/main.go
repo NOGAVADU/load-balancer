@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/nogavadu/load_balancer/internal/config"
+	lb "github.com/nogavadu/load_balancer/internal/handlers/load_balancer"
+	bp "github.com/nogavadu/load_balancer/internal/lib/backends_pool"
 	"github.com/nogavadu/load_balancer/internal/lib/logger/sl"
 	"github.com/nogavadu/load_balancer/pkg/pretty_slog"
 	"log/slog"
@@ -29,9 +31,29 @@ func main() {
 	}
 	logger.Info("config initialized")
 
+	var backendsPool bp.BackendsPool
+
+	logger.Info("backends configuration started")
+	var errCounter int
+	for _, backend := range cfg.BackendsPool {
+		err = backendsPool.AddBackend(backend, logger)
+		if err != nil {
+			logger.Error(fmt.Sprintf("failed to parse backend URL: %s", backend), sl.Err(err))
+			errCounter++
+		}
+	}
+	if errCounter == len(cfg.BackendsPool) {
+		logger.Error("failed to configure backends")
+		os.Exit(1)
+	} else if errCounter != 0 {
+		logger.Error(fmt.Sprintf("backends configurated with %d errors", errCounter), sl.Err(err))
+	} else {
+		logger.Info("all backends configurated")
+	}
+
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.HTTPServer.Port),
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}),
+		Handler: lb.New(&backendsPool, logger),
 	}
 
 	logger.Info("load balancer started", slog.Int("port", cfg.HTTPServer.Port))
