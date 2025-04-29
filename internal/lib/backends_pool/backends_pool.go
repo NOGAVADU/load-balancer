@@ -49,6 +49,9 @@ func (bp *BackendsPool) AddBackend(uri string, logger *slog.Logger) error {
 		},
 		ErrorHandler: func(writer http.ResponseWriter, request *http.Request, e error) {
 			logger.Error(fmt.Sprintf("failed to proxy request to %s", serverUrl.Host), sl.Err(e))
+
+			alive := isBackendAlive(serverUrl)
+			bp.changeBackendStatus(serverUrl, alive)
 		},
 	}
 
@@ -60,4 +63,25 @@ func (bp *BackendsPool) AddBackend(uri string, logger *slog.Logger) error {
 	})
 
 	return nil
+}
+
+func (bp *BackendsPool) PingBackends(logger *slog.Logger) {
+	for _, b := range bp.backends {
+		alive := isBackendAlive(b.URL)
+		b.SetAlive(alive)
+		if !alive {
+			logger.Warn(fmt.Sprintf("backend %s is not alive", b.URL))
+		} else {
+			logger.Info(fmt.Sprintf("backend %s is alive", b.URL))
+		}
+	}
+}
+
+func (bp *BackendsPool) changeBackendStatus(backendUrl *url.URL, status bool) {
+	for _, b := range bp.backends {
+		if b.URL.String() == backendUrl.String() {
+			b.SetAlive(status)
+			break
+		}
+	}
 }

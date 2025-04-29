@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 )
 
 const (
@@ -51,6 +52,8 @@ func main() {
 		logger.Info("all backends configurated")
 	}
 
+	go startBackendsPoolChecking(&backendsPool, logger)
+
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.HTTPServer.Port),
 		Handler: lb.New(&backendsPool, logger),
@@ -59,5 +62,15 @@ func main() {
 	logger.Info("load balancer started", slog.Int("port", cfg.HTTPServer.Port))
 	if err = server.ListenAndServe(); err != nil {
 		logger.Error("failed to start server", sl.Err(err))
+	}
+}
+
+func startBackendsPoolChecking(backendsPool *bp.BackendsPool, logger *slog.Logger) {
+	ticker := time.NewTicker(5 * time.Minute)
+	for {
+		select {
+		case <-ticker.C:
+			backendsPool.PingBackends(logger)
+		}
 	}
 }

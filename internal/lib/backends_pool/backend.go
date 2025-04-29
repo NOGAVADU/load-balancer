@@ -1,10 +1,14 @@
 package backends_pool
 
 import (
+	"net"
 	"net/http/httputil"
 	"net/url"
 	"sync"
+	"time"
 )
+
+const pingTimeout = 3 * time.Second
 
 type Backend struct {
 	URL          *url.URL
@@ -25,4 +29,13 @@ func (b *Backend) IsAlive() bool {
 	defer b.Mux.RUnlock()
 
 	return b.Alive
+}
+
+func isBackendAlive(u *url.URL) bool {
+	conn, err := net.DialTimeout("tcp", u.Host, pingTimeout)
+	if err != nil {
+		return false
+	}
+	defer conn.Close()
+	return true
 }
