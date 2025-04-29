@@ -9,7 +9,10 @@ import (
 	"net/url"
 	"sync"
 	"sync/atomic"
+	"time"
 )
+
+const backendsCheckTicker = time.Minute * 5
 
 type BackendsPool struct {
 	backends []*Backend
@@ -82,6 +85,18 @@ func (bp *BackendsPool) changeBackendStatus(backendUrl *url.URL, status bool) {
 		if b.URL.String() == backendUrl.String() {
 			b.SetAlive(status)
 			break
+		}
+	}
+}
+
+func StartBackendsChecking(bp *BackendsPool, logger *slog.Logger) {
+	t := time.NewTicker(backendsCheckTicker)
+	for {
+		select {
+		case <-t.C:
+			logger.Info("start backends check")
+			bp.PingBackends(logger)
+			logger.Info("backends check finished")
 		}
 	}
 }
