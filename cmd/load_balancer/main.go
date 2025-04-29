@@ -35,7 +35,6 @@ func main() {
 
 	var backendsPool lb.BackendsPool
 
-	logger.Info("backends configuration started")
 	var errCounter int
 	for _, backend := range cfg.BackendsPool {
 		err = backendsPool.AddBackend(backend, logger)
@@ -53,7 +52,7 @@ func main() {
 		logger.Info("all backends configurated")
 	}
 
-	go lb.StartBackendsChecking(&backendsPool, logger)
+	go backendsPool.WatchBackends(logger)
 
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.HTTPServer.Port),
