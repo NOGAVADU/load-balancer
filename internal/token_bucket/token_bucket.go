@@ -2,6 +2,7 @@ package token_bucket
 
 import (
 	"github.com/nogavadu/load_balancer/internal/lib/request"
+	"github.com/nogavadu/load_balancer/internal/lib/response"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -50,7 +51,7 @@ func New() func(next http.Handler) http.Handler {
 			if sessionStorage[clientIP].HandleRequest() {
 				next.ServeHTTP(w, r)
 			} else {
-				http.Error(w, "too many requests", http.StatusTooManyRequests)
+				response.Err(w, "too many requests", http.StatusTooManyRequests)
 				return
 			}
 		})

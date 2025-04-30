@@ -1,6 +1,7 @@
 package load_balancer
 
 import (
+	"github.com/nogavadu/load_balancer/internal/lib/response"
 	"log/slog"
 	"net/http"
 )
@@ -10,7 +11,7 @@ func NewHandler(backendsPool *BackendsPool, logger *slog.Logger) http.HandlerFun
 		backend := backendsPool.GetNext()
 		if backend == nil {
 			logger.Error("no available backend")
-			http.Error(w, "service not available", http.StatusServiceUnavailable)
+			response.Err(w, "no available backend", http.StatusServiceUnavailable)
 			return
 		}
 
