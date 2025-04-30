@@ -10,8 +10,6 @@ FROM alpine:latest
 
 WORKDIR /root/
 COPY --from=builder /github.com/nogavadu/load_balancer/bin/load_balancer .
-COPY --from=builder /github.com/nogavadu/load_balancer/config/config.yaml .
-
-ENV CONFIG_PATH="./config.yaml"
+COPY --from=builder /github.com/nogavadu/load_balancer/config/config.yaml ./config.yaml
 
 CMD ["./load_balancer"]

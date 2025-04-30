@@ -17,20 +17,13 @@ var (
 	errInvalidConfig      = errors.New("invalid config")
 )
 
-type HTTPServer struct {
-	Port        int           `yaml:"port"`
-	Timeout     time.Duration `yaml:"timeout"`
-	IdleTimeout time.Duration `yaml:"idle_timeout"`
-}
-
 type Config struct {
-	path         string
 	mux          *sync.RWMutex
-	HTTPServer   HTTPServer `yaml:"http_server"`
-	BackendsPool []string   `yaml:"backends_pool"`
+	BackendsPool []string `yaml:"backends_pool"`
 }
 
-func Read(path string) (*Config, error) {
+func Read() (*Config, error) {
+	path := os.Getenv("CONFIG_PATH")
 	if path == "" {
 		return nil, errEmptyConfigPath
 	}
@@ -40,8 +33,7 @@ func Read(path string) (*Config, error) {
 	}
 
 	cfg := &Config{
-		path: path,
-		mux:  &sync.RWMutex{},
+		mux: &sync.RWMutex{},
 	}
 	if err := cleanenv.ReadConfig(path, cfg); err != nil {
 		return nil, fmt.Errorf("%w: %w", errInvalidConfig, err)
@@ -54,7 +46,7 @@ func (c *Config) UpdateBackendsPool() error {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
-	cfg, err := Read(c.path)
+	cfg, err := Read()
 	if err != nil {
 		return fmt.Errorf("%w: %w", errInvalidConfig, err)
 	}

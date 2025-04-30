@@ -22,7 +22,7 @@ func main() {
 	logger := slog.New(pretty_slog.NewHandler(nil))
 	logger.Info("logger initialized")
 
-	cfg, err := config.Read(os.Getenv("CONFIG_PATH"))
+	cfg, err := config.Read()
 	if err != nil {
 		logger.Error("failed to load config", sl.Err(err))
 		os.Exit(1)
@@ -59,14 +59,15 @@ func main() {
 
 	tokenBucketMiddleware := token_bucket.New()
 
+	port := os.Getenv("HTTP_SERVER_PORT")
 	server := http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.HTTPServer.Port),
+		Addr:    fmt.Sprintf(":%s", port),
 		Handler: tokenBucketMiddleware(lb.NewHandler(&backendsPool, logger)),
 	}
 
 	go func() {
 		logger.Info("load balancer started",
-			slog.Int("port", cfg.HTTPServer.Port),
+			slog.String("port", port),
 			slog.String("backends", fmt.Sprintf("%v", cfg.BackendsPool)),
 		)
 
