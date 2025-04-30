@@ -58,7 +58,7 @@ func main() {
 
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.HTTPServer.Port),
-		Handler: lb.New(&backendsPool, logger),
+		Handler: lb.NewHandler(&backendsPool, logger),
 	}
 
 	go func() {

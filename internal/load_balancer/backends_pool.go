@@ -57,7 +57,7 @@ func (bp *BackendsPool) AddBackend(uri string, logger *slog.Logger) error {
 		bp.changeBackendStatus(serverUrl, false)
 
 		logger.Info(fmt.Sprintf("Trying another backend..."))
-		lb := New(bp, logger)
+		lb := NewHandler(bp, logger)
 		lb(w, request.CloneRequest(r))
 	}
 

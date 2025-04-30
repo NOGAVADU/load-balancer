@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func New(backendsPool *BackendsPool, logger *slog.Logger) http.HandlerFunc {
+func NewHandler(backendsPool *BackendsPool, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		backend := backendsPool.GetNext()
 		if backend == nil {
