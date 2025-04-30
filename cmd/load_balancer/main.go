@@ -7,6 +7,7 @@ import (
 	"github.com/nogavadu/load_balancer/internal/config"
 	"github.com/nogavadu/load_balancer/internal/lib/logger/sl"
 	lb "github.com/nogavadu/load_balancer/internal/load_balancer"
+	"github.com/nogavadu/load_balancer/internal/token_bucket"
 	"github.com/nogavadu/load_balancer/pkg/pretty_slog"
 	"log"
 	"log/slog"
@@ -56,9 +57,11 @@ func main() {
 
 	go backendsPool.WatchBackends(logger)
 
+	tokenBucketMiddleware := token_bucket.New()
+
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.HTTPServer.Port),
-		Handler: lb.NewHandler(&backendsPool, logger),
+		Handler: tokenBucketMiddleware(lb.NewHandler(&backendsPool, logger)),
 	}
 
 	go func() {
