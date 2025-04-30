@@ -11,15 +11,11 @@ import (
 	"os"
 )
 
-const (
-	configPath = "./config/config.yaml"
-)
-
 func main() {
 	logger := slog.New(pretty_slog.NewHandler(nil))
 	logger.Info("logger initialized")
 
-	cfg, err := config.Read(configPath)
+	cfg, err := config.Read(os.Getenv("CONFIG_PATH"))
 	if err != nil {
 		logger.Error("failed to load config", sl.Err(err))
 		os.Exit(1)
