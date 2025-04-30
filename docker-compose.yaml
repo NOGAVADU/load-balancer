@@ -1,0 +1,11 @@
+services:
+  load_balancer:
+    build: .
+    ports:
+      - "80:8080"
+  back1:
+    image: strm/helloworld-http
+  back2:
+    image: strm/helloworld-http
+  back3:
+    image: strm/helloworld-http
