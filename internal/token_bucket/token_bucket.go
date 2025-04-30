@@ -21,11 +21,19 @@ type tokenBucket struct {
 	cap          int
 	curAmount    int32
 	refillPeriod time.Duration
-	lastRefill   time.Time
 }
 
 func New() func(next http.Handler) http.Handler {
+	newSession := make(chan string)
 	sessionStorage := make(SessionStorage)
+	go func() {
+		for {
+			select {
+			case clientIP := <-newSession:
+				go sessionStorage[clientIP].Refill()
+			}
+		}
+	}()
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +41,7 @@ func New() func(next http.Handler) http.Handler {
 			_, exists := sessionStorage[clientIP]
 			if !exists {
 				sessionStorage[clientIP] = CreateBucket(6, time.Second*10)
+				newSession <- clientIP
 			}
 
 			if sessionStorage[clientIP].HandleRequest() {
@@ -50,7 +59,6 @@ func CreateBucket(cap int, refillPeriod time.Duration) TokenBucket {
 		cap:          cap,
 		curAmount:    int32(cap),
 		refillPeriod: refillPeriod,
-		lastRefill:   time.Now(),
 	}
 }
 
@@ -74,20 +82,18 @@ func (t *tokenBucket) GetAmount() int {
 }
 
 func (t *tokenBucket) Refill() {
-	if int(t.curAmount) < t.cap {
-		t.increment()
-		t.lastRefill = time.Now()
+	ticker := time.NewTicker(t.refillPeriod)
+	defer ticker.Stop()
+
+	select {
+	case <-ticker.C:
+		if int(t.curAmount) < t.cap {
+			t.increment()
+		}
 	}
 }
 
 func (t *tokenBucket) HandleRequest() bool {
-	elapsed := time.Since(t.lastRefill)
-	if elapsed >= t.refillPeriod {
-		tokens := elapsed / t.refillPeriod
-		for range tokens {
-			t.Refill()
-		}
-	}
 	if t.curAmount < 1 {
 		return false
 	}
