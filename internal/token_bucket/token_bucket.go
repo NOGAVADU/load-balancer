@@ -1,7 +1,7 @@
 package token_bucket
 
 import (
-	"github.com/nogavadu/load_balancer/pkg/request"
+	"github.com/nogavadu/load_balancer/internal/lib/request"
 	"net/http"
 	"sync/atomic"
 	"time"
