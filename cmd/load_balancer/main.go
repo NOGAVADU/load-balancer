@@ -1,14 +1,20 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/nogavadu/load_balancer/internal/config"
 	"github.com/nogavadu/load_balancer/internal/lib/logger/sl"
 	lb "github.com/nogavadu/load_balancer/internal/load_balancer"
 	"github.com/nogavadu/load_balancer/pkg/pretty_slog"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -55,11 +61,34 @@ func main() {
 		Handler: lb.New(&backendsPool, logger),
 	}
 
-	logger.Info("load balancer started",
-		slog.Int("port", cfg.HTTPServer.Port),
-		slog.String("backends", fmt.Sprintf("%v", cfg.BackendsPool)),
-	)
-	if err = server.ListenAndServe(); err != nil {
-		logger.Error("failed to start server", sl.Err(err))
+	go func() {
+		logger.Info("load balancer started",
+			slog.Int("port", cfg.HTTPServer.Port),
+			slog.String("backends", fmt.Sprintf("%v", cfg.BackendsPool)),
+		)
+
+		if err = server.ListenAndServe(); err != nil {
+			logger.Error("failed to start server", sl.Err(err))
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	sig := <-quit
+
+	logger.Info(fmt.Sprintf("received signal: %s. Shutting down...", sig))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	if err = server.Shutdown(ctx); err != nil {
+		logger.Error("server forced to shutdown", sl.Err(err))
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.Println("forcing shutdown due to timeout")
+			server.Close()
+		}
 	}
+
+	logger.Info("server turned down")
 }
