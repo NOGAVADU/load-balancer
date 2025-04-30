@@ -7,12 +7,12 @@ import (
 	"time"
 )
 
+// TODO: add methods to patch token bucket defaults settings
 type SessionStorage map[string]TokenBucket
 
 type TokenBucket interface {
 	increment()
 	decrement()
-	GetAmount() int
 	Refill()
 	HandleRequest() bool
 }
@@ -23,8 +23,11 @@ type tokenBucket struct {
 	refillPeriod time.Duration
 }
 
+// New returns the middleware that implements the token bucket algorithm.
+// If the bucket is empty, return an error to the client
 func New() func(next http.Handler) http.Handler {
 	newSession := make(chan string)
+	// TODO: Replace by normal data base (sqlite, postgres)
 	sessionStorage := make(SessionStorage)
 	go func() {
 		for {
@@ -75,10 +78,6 @@ func (t *tokenBucket) decrement() {
 	}
 
 	atomic.StoreInt32(&t.curAmount, t.curAmount-1)
-}
-
-func (t *tokenBucket) GetAmount() int {
-	return int(t.curAmount)
 }
 
 func (t *tokenBucket) Refill() {
