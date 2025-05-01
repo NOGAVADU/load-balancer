@@ -55,7 +55,7 @@ func main() {
 		logger.Info("all backends configurated")
 	}
 
-	go backendsPool.WatchBackends(logger)
+	go backendsPool.HealthCheck(logger)
 
 	tokenBucketMiddleware := token_bucket.New()
 

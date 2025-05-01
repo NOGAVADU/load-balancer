@@ -13,11 +13,6 @@ import (
 	"time"
 )
 
-const (
-	Attempts int = iota
-	Retry
-)
-
 const backendsCheckTicker = time.Minute * 5
 
 type BackendsPool struct {
@@ -61,26 +56,20 @@ func (bp *BackendsPool) AddBackend(uri string, logger *slog.Logger) error {
 		lb(w, request.CloneRequest(r))
 	}
 
+	alive := true
+	if err = PingBackend(serverUrl); err != nil {
+		logger.Error(fmt.Sprintf("backend: %s is not alive", serverUrl.Host), sl.Err(err))
+		alive = false
+	}
+
 	bp.backends = append(bp.backends, &Backend{
 		URL:          serverUrl,
-		Alive:        true,
+		Alive:        alive,
 		Mux:          &sync.RWMutex{},
 		ReverseProxy: proxy,
 	})
 
 	return nil
-}
-
-func (bp *BackendsPool) PingBackends(logger *slog.Logger) {
-	for _, b := range bp.backends {
-		alive, err := isBackendAlive(b.URL)
-		b.SetAlive(alive)
-		if !alive {
-			logger.Error(fmt.Sprintf("backend %s is not alive", b.URL), sl.Err(err))
-		} else {
-			logger.Info(fmt.Sprintf("backend %s is alive", b.URL))
-		}
-	}
 }
 
 func (bp *BackendsPool) changeBackendStatus(backendUrl *url.URL, status bool) {
@@ -92,13 +81,23 @@ func (bp *BackendsPool) changeBackendStatus(backendUrl *url.URL, status bool) {
 	}
 }
 
-func (bp *BackendsPool) WatchBackends(logger *slog.Logger) {
+func (bp *BackendsPool) HealthCheck(logger *slog.Logger) {
 	t := time.NewTicker(backendsCheckTicker)
 	for {
 		select {
 		case <-t.C:
 			logger.Info("start backends check")
-			bp.PingBackends(logger)
+			for _, b := range bp.backends {
+				err := PingBackend(b.URL)
+				if err != nil {
+					logger.Error(fmt.Sprintf("backend: %s is not alive", b.URL), sl.Err(err))
+					b.SetAlive(false)
+					continue
+				}
+
+				logger.Info(fmt.Sprintf("backend %s is alive", b.URL))
+				b.SetAlive(true)
+			}
 			logger.Info("backends check finished")
 		}
 	}

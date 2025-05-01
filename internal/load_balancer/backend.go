@@ -1,7 +1,8 @@
 package load_balancer
 
 import (
-	"net"
+	"fmt"
+	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"sync"
@@ -31,20 +32,16 @@ func (b *Backend) IsAlive() bool {
 	return b.Alive
 }
 
-func isBackendAlive(u *url.URL) (bool, error) {
-	host := u.Host
-	if _, _, err := net.SplitHostPort(host); err != nil {
-		port := "80"
-		if u.Scheme == "https" {
-			port = "443"
-		}
-		host = net.JoinHostPort(host, port)
+func PingBackend(u *url.URL) error {
+	client := http.Client{
+		Timeout: pingTimeout,
 	}
 
-	conn, err := net.DialTimeout("tcp", host, pingTimeout)
+	resp, err := client.Get(u.String())
 	if err != nil {
-		return false, err
+		return fmt.Errorf("backend: %s is not alive: %w", u.String(), err)
 	}
-	defer conn.Close()
-	return true, nil
+	defer resp.Body.Close()
+
+	return nil
 }
