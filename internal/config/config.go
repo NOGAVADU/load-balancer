@@ -7,6 +7,7 @@ import (
 	"github.com/nogavadu/load_balancer/internal/lib/logger/sl"
 	"log/slog"
 	"os"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -42,28 +43,22 @@ func Read() (*Config, error) {
 	return cfg, nil
 }
 
-func (c *Config) UpdateBackendsPool() error {
-	c.mux.Lock()
-	defer c.mux.Unlock()
-
-	cfg, err := Read()
-	if err != nil {
-		return fmt.Errorf("%w: %w", errInvalidConfig, err)
-	}
-
-	c.BackendsPool = cfg.BackendsPool
-
-	return nil
-}
-
 func (c *Config) WatchConfig(logger *slog.Logger) {
 	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
 	for range ticker.C {
-		err := c.UpdateBackendsPool()
+		cfg, err := Read()
 		if err != nil {
-			logger.Error("failed to update backends pool", sl.Err(err))
+			logger.Error("failed to update config", sl.Err(err))
+		}
+		if reflect.DeepEqual(c.BackendsPool, cfg.BackendsPool) {
+			continue
 		} else {
-			logger.Info("backends pool has been updated")
+			c.mux.Lock()
+			c.BackendsPool = cfg.BackendsPool
+			logger.Info("config has been updated")
+			c.mux.Unlock()
 		}
 	}
 }

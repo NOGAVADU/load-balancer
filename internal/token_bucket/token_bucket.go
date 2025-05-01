@@ -85,12 +85,9 @@ func (t *tokenBucket) Refill() {
 	ticker := time.NewTicker(t.refillPeriod)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			if int(t.curAmount) < t.cap {
-				t.increment()
-			}
+	for range ticker.C {
+		if int(t.curAmount) < t.cap {
+			t.increment()
 		}
 	}
 }

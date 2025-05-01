@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const backendsCheckTicker = time.Minute * 5
+const backendsCheckTicker = time.Minute
 
 type BackendsPool struct {
 	backends []*Backend
@@ -56,15 +56,13 @@ func (bp *BackendsPool) AddBackend(uri string, logger *slog.Logger) error {
 		lb(w, request.CloneRequest(r))
 	}
 
-	alive := true
 	if err = PingBackend(serverUrl); err != nil {
-		logger.Error(fmt.Sprintf("backend: %s is not alive", serverUrl.Host), sl.Err(err))
-		alive = false
+		return err
 	}
 
 	bp.backends = append(bp.backends, &Backend{
 		URL:          serverUrl,
-		Alive:        alive,
+		Alive:        true,
 		Mux:          &sync.RWMutex{},
 		ReverseProxy: proxy,
 	})
@@ -82,23 +80,22 @@ func (bp *BackendsPool) changeBackendStatus(backendUrl *url.URL, status bool) {
 }
 
 func (bp *BackendsPool) HealthCheck(logger *slog.Logger) {
-	t := time.NewTicker(backendsCheckTicker)
-	for {
-		select {
-		case <-t.C:
-			logger.Info("start backends check")
-			for _, b := range bp.backends {
-				err := PingBackend(b.URL)
-				if err != nil {
-					logger.Error(fmt.Sprintf("backend: %s is not alive", b.URL), sl.Err(err))
-					b.SetAlive(false)
-					continue
-				}
+	ticker := time.NewTicker(backendsCheckTicker)
+	defer ticker.Stop()
 
-				logger.Info(fmt.Sprintf("backend %s is alive", b.URL))
-				b.SetAlive(true)
+	for range ticker.C {
+		logger.Info("start backends check")
+		for _, b := range bp.backends {
+			err := PingBackend(b.URL)
+			if err != nil {
+				logger.Error(fmt.Sprintf("backend: %s is not alive", b.URL), sl.Err(err))
+				b.SetAlive(false)
+				continue
 			}
-			logger.Info("backends check finished")
+
+			logger.Info(fmt.Sprintf("backend %s is alive", b.URL))
+			b.SetAlive(true)
 		}
+		logger.Info("backends check finished")
 	}
 }

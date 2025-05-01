@@ -50,10 +50,9 @@ func main() {
 		logger.Error("failed to configure backends")
 		os.Exit(1)
 	} else if errCounter != 0 {
-		logger.Error(fmt.Sprintf("backends configurated with %d errors", errCounter), sl.Err(err))
-	} else {
-		logger.Info("all backends configurated")
+		logger.Warn(fmt.Sprintf("failed to configurate %d backends", errCounter))
 	}
+	logger.Info("backends configurated")
 
 	go backendsPool.HealthCheck(logger)
 
