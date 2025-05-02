@@ -1,7 +1,7 @@
 services:
   load_balancer:
     environment:
-      CONFIG_PATH: "./config.yaml"
+      CONFIG_PATH: ${CONFIG_PATH}
       HTTP_SERVER_PORT: ${HTTP_SERVER_PORT}
     build: .
     ports:
