@@ -56,18 +56,19 @@ func (bp *BackendsPool) AddBackend(uri string, logger *slog.Logger) error {
 		lb(w, request.CloneRequest(r))
 	}
 
+	alive := true
 	if err = PingBackend(serverUrl); err != nil {
-		return err
+		alive = false
 	}
 
 	bp.backends = append(bp.backends, &Backend{
 		URL:          serverUrl,
-		Alive:        true,
+		Alive:        alive,
 		Mux:          &sync.RWMutex{},
 		ReverseProxy: proxy,
 	})
 
-	return nil
+	return err
 }
 
 func (bp *BackendsPool) changeBackendStatus(backendUrl *url.URL, status bool) {
